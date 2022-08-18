@@ -25,5 +25,5 @@ app.get('/talker', async (_request, response) => {
 });
 
 app.get('/talker/:id', searchPeople, (request, response) => {
-  const reading = await fs.readFile('talker.json', 'utf-8');	  response.status(200).json(request.person);
-  const answer = JSON.parse(reading);	})
+  response.status(200).json(request.person);
+});
