@@ -20,7 +20,7 @@ app.listen(PORT, () => {
 });
 
 app.get('/talker', async (_request, response) => {
-  const getting = await fs.getTalker('talker.json', 'utf-8');
+  const getting = await fs.readFile('talker.json', 'utf-8');
   const answer = JSON.parse(getting);
   response.status(200).json(answer);
 });
