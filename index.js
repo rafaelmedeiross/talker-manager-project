@@ -18,12 +18,12 @@ app.listen(PORT, () => {
   console.log('Online');
 });
 
-app.get('/talker', async (_req, res) => {
+app.get('/talker', async (_request, response) => {
   const reading = await fs.readFile('talker.json', 'utf-8');
   const answer = JSON.parse(reading);
-  res.status(200).json(answer);
+  response.status(200).json(answer);
 });
 
-app.get('/talker/:id', searchPeople, (require, response) => {
-  const reading = await fs.readFile('talker.json', 'utf-8');	  response.status(200).json(require.person);
+app.get('/talker/:id', searchPeople, (request, response) => {
+  const reading = await fs.readFile('talker.json', 'utf-8');	  response.status(200).json(request.person);
   const answer = JSON.parse(reading);	})
