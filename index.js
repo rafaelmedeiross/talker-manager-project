@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 
+const { findPerson }
 const app = express();
 app.use(bodyParser.json());
 
@@ -22,3 +23,7 @@ app.get('/talker', async (_req, res) => {
   const answer = JSON.parse(reading);
   res.status(200).json(answer);
 });
+
+app.get('/talker/:id', findPerson, (req, res) => {
+  const reading = await fs.readFile('talker.json', 'utf-8');	  res.status(200).json(req.person);
+  const answer = JSON.parse(reading);	})
