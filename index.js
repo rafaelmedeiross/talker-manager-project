@@ -1,89 +1,123 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs').promises;
-const { readFile, findPerson } = require('./middleware');
-const { validateField, validateToken, validatePersonalCreation } = require('./middleware');
-const generationToken = require('./generationToken');
+const crypto = require('crypto');
+const { validateTalker, authoValidate } = require('./middleware');
+require('express-async-errors');
 
 const app = express();
 app.use(bodyParser.json());
 
 const HTTP_OK_STATUS = 200;
 const PORT = '3000';
-const file = 'talker.json';
+const writeFile = async (conteudo) => {
+  await fs.writeFile('./talker.json', JSON.stringify(conteudo));
+};
 
-// não remova esse endpoint, e para o avaliador funcionar
+const readFile = async () => {
+  const talkers = await fs.readFile('./talker.json', 'utf8');
+  return JSON.parse(talkers);
+};
+
 app.get('/', (_request, response) => {
   response.status(HTTP_OK_STATUS).send();
 });
 
-app.get('/talker/search', validateToken, async (req, res) => {
-  const { q } = req.query;
-  const dataPeople = await fs.readFile(file, 'utf-8');
-  const jsonData = JSON.parse(dataPeople);
-
-  if (!req.query.q) return res.status(200).json(jsonData);
-
-  const containLyrics = jsonData.filter(({ name }) => name.includes(q));
-
-  if (containLyrics.length === 0) return res.status(200).json(containLyrics);
-  
-  res.status(200).json(containLyrics);
+app.get('/talker', async (request, response) => {
+  const talkers = await readFile();
+  response.status(200).json(talkers);
 });
 
-app.get('/talker/:id', findPerson, (req, res) => {
-  res.status(200).json(req.person);
+app.get('/talker/search', authoValidate, async (req, res) => {
+  try {
+    const talkers = await readFile();
+    const { q } = req.query;
+
+    const talkerFiltrados = talkers.filter((t) => 
+      t.name.toLowerCase().indexOf(q.toLowerCase()) >= 0);
+    return res.status(200).json(talkerFiltrados);
+  } catch (error) {
+    return res.status(500).end();
+  }
 });
 
-app.put('/talker/:id', validateToken, validatePersonalCreation, async (req, res) => {
+app.get('/talker/:id', async (req, res) => {
+  try {
+    const talkers = await readFile();
+    const { id } = req.params;
+    const talker = talkers.find((t) => t.id === Number(id));
+    if (!talker) {
+      return res.status(404).json({ message: 'Pessoa palestrante não encontrada' });
+    }
+    return res.status(200).json(talker);
+  } catch (error) {
+    return res.status(500).end();
+  }
+});
+
+function emailIsValid(email) {
+  const re = /\S+@\S+\.\S+/;
+  return re.test(email);
+}
+
+function validationLoginFields(email, password) {
+  if (email === undefined) {
+    return 'O campo "email" é obrigatório';
+  }
+  if (!emailIsValid(email)) {
+    return 'O "email" deve ter o formato "email@email.com"';
+  }
+  if (password === undefined) {
+    return 'O campo "password" é obrigatório';
+  }
+  if (password.length < 6) {
+    return 'O "password" deve ter pelo menos 6 caracteres';
+  }
+  return true;
+}
+
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const validaCampos = validationLoginFields(email, password);
+    if (validaCampos !== true) {
+      return res.status(400).json({ message: validaCampos });
+    }
+    const token = crypto.randomBytes(8).toString('hex');
+    return res.status(200).json({ token });
+  } catch (error) {
+    return res.status(500).end();
+  }
+});
+
+app.post('/talker', authoValidate, validateTalker, async (req, res) => {
+  const talker = req.body;
+  const talkers = await readFile();
+  const pegaMaiorID = talkers.reduce((prev, current) => (
+    (prev.id > current.id) ? prev : current));
+  talker.id = pegaMaiorID.id + 1;
+  talkers.push(talker);
+  await writeFile(talkers);
+ res.status(201).json(talker);
+});
+
+app.put('/talker/:id', authoValidate, validateTalker, async (req, res) => {
   const { id } = req.params;
   const { name, age, talk } = req.body;
-
-  const dataPeople = await fs.readFile(file, 'utf-8');
-  const jsonData = JSON.parse(dataPeople);
-
-  const person = jsonData.findIndex((obj) => obj.id === Number(id));
-  const removePerson = jsonData.filter((obj) => obj.id !== Number(id));
-
-  if (person === -1) return res.status(404).json({ message: 'Talker not found!' });
-
-  const save = { ...jsonData[person], name, age, talk };
-
-  await fs.writeFile(file,
-  JSON.stringify([...removePerson, jsonData[person] = save]));
-
-  res.status(200).json(save);
+  const talkers = await readFile();
+  const index = talkers.findIndex((findTalker) => findTalker.id === Number(id));
+  talkers[index] = { ...talkers[index], name, age, talk };
+  await writeFile(talkers);
+ res.status(200).json(talkers[index]);
 });
 
-app.delete('/talker/:id', validateToken, async (req, res) => {
+app.delete('/talker/:id', authoValidate, async (req, res) => {
   const { id } = req.params;
-
-  const dataPeople = await fs.readFile(file, 'utf-8');
-  const jsonData = JSON.parse(dataPeople);
-
-  const removePerson = jsonData.filter((obj) => obj.id !== Number(id));
-
-  await fs.writeFile(file,
-  JSON.stringify(removePerson));
-
+  const talkers = await readFile();
+  const index = talkers.findIndex((findTalker) => findTalker.id === Number(id));
+  talkers.splice(index, 1);
+  await writeFile(talkers);
   res.status(204).end();
-});
-
-app.post('/login', validateField, generationToken, (req, res) => {
-  res.status(200).json({ token: req.headers.authorization });
-});
-
-app.get('/talker', readFile, (req, res) => {
-  res.status(200).json(req.answer);
-});
-
-app.post('/talker', validateToken, validatePersonalCreation, async (req, res) => {
-  const dataPeople = await fs.readFile(file, 'utf-8');
-  const jsonData = JSON.parse(dataPeople);
-  jsonData.push(req.body);
-  const rewriteFile = jsonData.map((item, index) => ({ ...item, id: 1 + index }));
-  await fs.writeFile(file, JSON.stringify(rewriteFile));
-  res.status(201).json(rewriteFile[rewriteFile.length - 1]);
 });
 
 app.listen(PORT, () => {
