@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const crypto = require('crypto');
 const { validateTalker, authoValidate } = require('./middleware');
-require('express-async-errors');
+// require('express-async-errors');
 
 const app = express();
 app.use(bodyParser.json());

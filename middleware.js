@@ -71,6 +71,8 @@ const authoValidate = (req, res, next) => {
   };
   
   module.exports = {
+
     validateTalker,
-     authoValidate,
+    authoValidate,
+
     };
