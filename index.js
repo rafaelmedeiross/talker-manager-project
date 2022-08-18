@@ -2,7 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 
-const { searchPeople } = require('.middleware');
+const { searchPeople } = require('./middleware');
+
 const app = express();
 app.use(bodyParser.json());
 
