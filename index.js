@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 
-const { searchPeople } = require('./middleware');
+const { searchPeople, getTalker } = require('./middleware');
 
 const app = express();
 app.use(bodyParser.json());
@@ -20,8 +20,8 @@ app.listen(PORT, () => {
 });
 
 app.get('/talker', async (_request, response) => {
-  const reading = await fs.readFile('talker.json', 'utf-8');
-  const answer = JSON.parse(reading);
+  const getting = await fs.getTalker('talker.json', 'utf-8');
+  const answer = JSON.parse(getting);
   response.status(200).json(answer);
 });
 

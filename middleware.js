@@ -19,4 +19,5 @@ const searchPeople = async (request, response) => {
 
 module.exports = {
   searchPeople,
+  getTalker,
 };
